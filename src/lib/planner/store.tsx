@@ -22,6 +22,8 @@ const KEY = "cabinet-planner-v1";
 
 const ORG_COLORS = ["#7fb3d5", "#f5cba7", "#a9dfbf", "#d7bde2", "#f9e79f", "#aeb6bf"];
 
+const pickColor = (i: number) => ORG_COLORS[i % ORG_COLORS.length] ?? "#7fb3d5";
+
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 function spaceForCabinet(cabinetId: string, c: { w: number; d: number; h: number }): Space {
@@ -56,7 +58,7 @@ function seed(): PlannerData {
       d: 25,
       h: 10,
       quantity: 4,
-      color: ORG_COLORS[0],
+      color: pickColor(0),
     },
     {
       id: uid(),
@@ -65,7 +67,7 @@ function seed(): PlannerData {
       d: 20,
       h: 8,
       quantity: 2,
-      color: ORG_COLORS[1],
+      color: pickColor(1),
     },
   ];
   const layout: Layout = {
@@ -234,7 +236,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       ...d,
       organizers: [
         ...d.organizers,
-        { id, ...v, color: ORG_COLORS[d.organizers.length % ORG_COLORS.length] },
+        { id, ...v, color: pickColor(d.organizers.length) },
       ],
     }));
     setSelection({ kind: "organizer", id });
