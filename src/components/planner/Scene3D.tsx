@@ -55,11 +55,12 @@ function CameraRig({ cabinet }: { cabinet: Cabinet }) {
 function CabinetMesh({ cabinet, onSelect }: { cabinet: Cabinet; onSelect: () => void }) {
   const { w, d, h } = cabinet;
   const panels: { size: [number, number, number]; pos: [number, number, number] }[] = [
+    // Open face points UP (like a drawer on the floor): floor + 4 walls, no top panel.
     { size: [w, WALL, d], pos: [0, WALL / 2, 0] },
-    { size: [w, WALL, d], pos: [0, h - WALL / 2, 0] },
-    { size: [WALL, h - 2 * WALL, d], pos: [-w / 2 + WALL / 2, h / 2, 0] },
-    { size: [WALL, h - 2 * WALL, d], pos: [w / 2 - WALL / 2, h / 2, 0] },
-    { size: [w - 2 * WALL, h - 2 * WALL, WALL], pos: [0, h / 2, -d / 2 + WALL / 2] },
+    { size: [WALL, h - WALL, d], pos: [-w / 2 + WALL / 2, (h + WALL) / 2, 0] },
+    { size: [WALL, h - WALL, d], pos: [w / 2 - WALL / 2, (h + WALL) / 2, 0] },
+    { size: [w - 2 * WALL, h - WALL, WALL], pos: [0, (h + WALL) / 2, -d / 2 + WALL / 2] },
+    { size: [w - 2 * WALL, h - WALL, WALL], pos: [0, (h + WALL) / 2, d / 2 - WALL / 2] },
   ];
   return (
     <group
