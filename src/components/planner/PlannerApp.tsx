@@ -284,7 +284,7 @@ function OrganizerList() {
               Quantity: {left} of {o.quantity} available
               {usedCount(o.id) > 0 && ` · ${usedCount(o.id)} placed`}
             </p>
-            <div className="mt-2 flex gap-2">
+            <div className="mt-2 flex gap-2" onClick={(e) => e.stopPropagation()}>
               <Button
                 disabled={left <= 0 || !activeSpace}
                 onClick={() =>
