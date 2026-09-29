@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { PlannerProvider, usePlanner } from "@/lib/planner/store";
-import { boxOf, fitsInSpace, sizeOf, statusMap } from "@/lib/planner/geometry";
+import { boxOf, fitsInSpace, interiorOf, sizeOf, statusMap } from "@/lib/planner/geometry";
 import { Scene3D } from "./Scene3D";
 import type { Cabinet, Organizer } from "@/lib/planner/types";
 
