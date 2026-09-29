@@ -342,7 +342,11 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       const p = activeLayout.placements.find((it) => it.id === id);
       const o = p ? organizerMap[p.organizerId] : null;
       if (!p || !o) return;
-      const pos = solve(activeLayout, o, p.rotation, x, z, activeSpace, id);
+      // Dragging stops at the inner walls: keep the organizer's full footprint inside the space.
+      const s = sizeOf(o, p.rotation);
+      const cx = clamp(x, 0, Math.max(0, activeSpace.w - s.w));
+      const cz = clamp(z, 0, Math.max(0, activeSpace.d - s.d));
+      const pos = solve(activeLayout, o, p.rotation, cx, cz, activeSpace, id);
       updateLayout((l) => ({
         ...l,
         placements: l.placements.map((it) => (it.id === id ? { ...it, ...pos } : it)),
