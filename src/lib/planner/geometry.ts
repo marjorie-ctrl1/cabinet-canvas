@@ -12,28 +12,30 @@ export type Box = {
   z1: number;
 };
 
+/** inner volume between the solid panels: floor + left/right + back/front walls, open top */
 export function interiorOf(c: Cabinet) {
   return {
     w: Math.max(1, c.w - 2 * WALL),
-    h: Math.max(1, c.h - 2 * WALL),
-    d: Math.max(1, c.d - WALL),
+    h: Math.max(1, c.h - WALL),
+    d: Math.max(1, c.d - 2 * WALL),
   };
 }
 
 export function mainSpace(c: Cabinet): Space {
   const i = interiorOf(c);
-  return (
-    c.spaces[0] ?? {
-      id: `${c.id}-main`,
-      name: "Main interior",
-      x: 0,
-      y: 0,
-      z: 0,
-      w: i.w,
-      d: i.d,
-      h: i.h,
-    }
-  );
+  const s = c.spaces[0];
+  // always size the main space to the real inner wall surfaces
+  return s
+    ? { ...s, x: 0, y: 0, z: 0, w: i.w, d: i.d, h: i.h }
+    : { id: `${c.id}-main`, name: "Main interior", x: 0, y: 0, z: 0, w: i.w, d: i.d, h: i.h };
+}
+
+/** keep a footprint's outer edges inside the inner wall surfaces */
+export function clampToWalls(x: number, z: number, s: { w: number; d: number }, space: Space) {
+  return {
+    x: clamp(x, 0, Math.max(0, space.w - s.w)),
+    z: clamp(z, 0, Math.max(0, space.d - s.d)),
+  };
 }
 
 /** effective footprint of an organizer at a given rotation */

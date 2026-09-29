@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { PlannerProvider, usePlanner } from "@/lib/planner/store";
-import { boxOf, fitsInSpace, sizeOf, statusMap } from "@/lib/planner/geometry";
+import { boxOf, fitsInSpace, interiorOf, sizeOf, statusMap } from "@/lib/planner/geometry";
 import { Scene3D } from "./Scene3D";
 import type { Cabinet, Organizer } from "@/lib/planner/types";
 
@@ -412,7 +412,7 @@ function CabinetProps({ cabinet }: { cabinet: Cabinet }) {
         <Field label="Height" value={cabinet.h} onChange={num("h")} />
       </div>
       <p className="text-xs text-muted-foreground">
-        Usable interior: {cabinet.spaces[0]?.w} × {cabinet.spaces[0]?.d} × {cabinet.spaces[0]?.h} cm
+        Usable interior: {interiorOf(cabinet).w} × {interiorOf(cabinet).d} × {interiorOf(cabinet).h} cm
       </p>
       <Button variant="danger" full onClick={() => deleteCabinet(cabinet.id)}>
         Delete cabinet
