@@ -16,7 +16,7 @@ import type {
   Selection,
   Space,
 } from "./types";
-import { boxOf, clamp, interiorOf, mainSpace, restingY, round1, sizeOf } from "./geometry";
+import { boxOf, clamp, clampToWalls, interiorOf, mainSpace, restingY, round1, sizeOf } from "./geometry";
 
 const KEY = "cabinet-planner-v1";
 
@@ -301,8 +301,9 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       ignoreId?: string,
     ) => {
       const s = sizeOf(organizer, rotation);
-      const px = round1(clamp(x, -20, space.w + 20 - s.w));
-      const pz = round1(clamp(z, -20, space.d + 20 - s.d));
+      const w = clampToWalls(x, z, s, space);
+      const px = round1(w.x);
+      const pz = round1(w.z);
       const others = layout.placements
         .filter((p) => p.id !== ignoreId)
         .map((p) => {
@@ -342,11 +343,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       const p = activeLayout.placements.find((it) => it.id === id);
       const o = p ? organizerMap[p.organizerId] : null;
       if (!p || !o) return;
-      // Dragging stops at the inner walls: keep the organizer's full footprint inside the space.
-      const s = sizeOf(o, p.rotation);
-      const cx = clamp(x, 0, Math.max(0, activeSpace.w - s.w));
-      const cz = clamp(z, 0, Math.max(0, activeSpace.d - s.d));
-      const pos = solve(activeLayout, o, p.rotation, cx, cz, activeSpace, id);
+      const pos = solve(activeLayout, o, p.rotation, x, z, activeSpace, id);
       updateLayout((l) => ({
         ...l,
         placements: l.placements.map((it) => (it.id === id ? { ...it, ...pos } : it)),
@@ -361,12 +358,14 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         ...l,
         placements: l.placements.map((p) =>
           p.id === id
-            ? {
-                ...p,
-                x: round1(v.x ?? p.x),
-                y: round1(Math.max(0, v.y ?? p.y)),
-                z: round1(v.z ?? p.z),
-              }
+            ? (() => {
+                const o = organizerMap[p.organizerId];
+                const w =
+                  o && activeSpace
+                    ? clampToWalls(v.x ?? p.x, v.z ?? p.z, sizeOf(o, p.rotation), activeSpace)
+                    : { x: v.x ?? p.x, z: v.z ?? p.z };
+                return { ...p, x: round1(w.x), y: round1(Math.max(0, v.y ?? p.y)), z: round1(w.z) };
+              })()
             : p,
         ),
       }));
@@ -380,7 +379,13 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         ...l,
         placements: l.placements.map((p) =>
           p.id === id
-            ? { ...p, rotation: (((p.rotation + dir * 90 + 360) % 360) as Placement["rotation"]) }
+            ? (() => {
+                const rotation = ((p.rotation + dir * 90 + 360) % 360) as Placement["rotation"];
+                const o = organizerMap[p.organizerId];
+                if (!o || !activeSpace) return { ...p, rotation };
+                const w = clampToWalls(p.x, p.z, sizeOf(o, rotation), activeSpace);
+                return { ...p, rotation, x: round1(w.x), z: round1(w.z) };
+              })()
             : p,
         ),
       }));
