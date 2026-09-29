@@ -370,7 +370,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         ),
       }));
     },
-    [updateLayout],
+    [updateLayout, organizerMap, activeSpace],
   );
 
   const rotatePlacement: Ctx["rotatePlacement"] = useCallback(
@@ -390,7 +390,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         ),
       }));
     },
-    [updateLayout],
+    [updateLayout, organizerMap, activeSpace],
   );
 
   const dropToRest: Ctx["dropToRest"] = useCallback(
