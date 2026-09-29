@@ -3,6 +3,7 @@ import { PlannerProvider, usePlanner } from "@/lib/planner/store";
 import { boxOf, fitsInSpace, interiorOf, sizeOf, statusMap } from "@/lib/planner/geometry";
 import { Scene3D } from "./Scene3D";
 import type { Cabinet, Organizer } from "@/lib/planner/types";
+import { parseDimensions, type ParsedItem } from "@/lib/planner/parse";
 
 /* ---------------------------------------------------------------- primitives */
 
@@ -71,14 +72,16 @@ function Modal({
   title,
   children,
   onClose,
+  wide,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  wide?: boolean;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-lg">
+      <div className={`w-full ${wide ? "max-w-2xl" : "max-w-sm"} max-h-[90vh] overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-lg`}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">{title}</h2>
           <Button variant="ghost" onClick={onClose}>
@@ -193,6 +196,100 @@ function LayoutDialog({ onClose }: { onClose: () => void }) {
           }}
         >
           Create layout
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+function PasteDialog({ kind, onClose }: { kind: "cabinet" | "organizer"; onClose: () => void }) {
+  const { addCabinet, addOrganizer } = usePlanner();
+  const label = kind === "cabinet" ? "Cabinet" : "Organizer";
+  const [text, setText] = useState("");
+  const [rows, setRows] = useState<ParsedItem[] | null>(null);
+  const min = kind === "cabinet" ? 5 : 1;
+  const upd = (i: number, k: keyof ParsedItem, v: string) =>
+    setRows((r) => r && r.map((x, j) => (j === i ? { ...x, [k]: k === "name" ? v : Number(v) || 0 } : x)));
+
+  if (!rows)
+    return (
+      <Modal title={`Paste ${label.toLowerCase()} list`} onClose={onClose} wide>
+        <p className="mb-2 text-xs text-muted-foreground">
+          One {label.toLowerCase()} per line, sizes in cm. Examples: "Box A: W30 D20 H10", "Tray 30 x 20 x 8",
+          or a table with Name / Width / Depth / Height columns.
+          {kind === "organizer" && " Add \"qty 4\" to set a quantity."}
+        </p>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={8}
+          placeholder={"Box A: W30 D20 H10\nBox B: W15 D20 H10"}
+          className="w-full rounded-md border border-input bg-card p-2 font-mono text-sm text-foreground outline-none focus:border-ring"
+        />
+        <div className="mt-3">
+          <Button variant="primary" full disabled={!text.trim()} onClick={() => setRows(parseDimensions(text, label))}>
+            Read sizes
+          </Button>
+        </div>
+      </Modal>
+    );
+
+  const valid = rows.length > 0 && rows.every((r) => r.w >= min && r.d >= min && r.h >= min);
+  return (
+    <Modal title={`Check ${label.toLowerCase()}s before creating`} onClose={onClose} wide>
+      {rows.length === 0 ? (
+        <p className="text-sm text-destructive">No sizes found. Go back and check the text.</p>
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs text-muted-foreground">
+              <th className="pb-1">Name</th>
+              <th className="pb-1">Type</th>
+              <th className="pb-1">W</th>
+              <th className="pb-1">D</th>
+              <th className="pb-1">H</th>
+              {kind === "organizer" && <th className="pb-1">Qty</th>}
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i}>
+                <td className="pr-1 py-0.5">
+                  <input value={r.name} onChange={(e) => upd(i, "name", e.target.value)}
+                    className="w-full rounded border border-input bg-card px-1.5 py-1 text-foreground" />
+                </td>
+                <td className="pr-1 text-xs font-semibold text-muted-foreground">{label}</td>
+                {(["w", "d", "h", ...(kind === "organizer" ? ["quantity"] : [])] as (keyof ParsedItem)[]).map((k) => (
+                  <td key={k} className="pr-1">
+                    <input type="number" value={r[k]} onChange={(e) => upd(i, k, e.target.value)}
+                      className="w-16 rounded border border-input bg-card px-1.5 py-1 text-foreground" />
+                  </td>
+                ))}
+                <td>
+                  <button type="button" className="text-xs text-destructive hover:underline"
+                    onClick={() => setRows(rows.filter((_, j) => j !== i))}>Remove</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <div className="mt-4 flex gap-2">
+        <Button onClick={() => setRows(null)}>Back</Button>
+        <Button
+          variant="primary"
+          disabled={!valid}
+          onClick={() => {
+            for (const r of rows) {
+              const base = { name: r.name.trim() || label, w: r.w, d: r.d, h: r.h };
+              if (kind === "cabinet") addCabinet(base);
+              else addOrganizer({ ...base, quantity: Math.max(1, Math.round(r.quantity)) });
+            }
+            onClose();
+          }}
+        >
+          Create {rows.length} {label.toLowerCase()}{rows.length === 1 ? "" : "s"}
         </Button>
       </div>
     </Modal>
