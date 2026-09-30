@@ -445,7 +445,9 @@ function LayoutList() {
 
 function LeftSidebar() {
   const [tab, setTab] = useState<"cabinets" | "organizers" | "layouts">("organizers");
-  const [dialog, setDialog] = useState<null | "cabinet" | "organizer" | "layout">(null);
+  const [dialog, setDialog] = useState<
+    null | "cabinet" | "organizer" | "layout" | "pasteCabinet" | "pasteOrganizer"
+  >(null);
   const tabs = [
     { id: "cabinets", label: "Cabinets" },
     { id: "organizers", label: "Organizers" },
@@ -464,6 +466,14 @@ function LeftSidebar() {
         <Button full onClick={() => setDialog("layout")}>
           + New Layout
         </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button onClick={() => setDialog("pasteCabinet")} title="Paste text with cabinet sizes">
+            Paste cabinets
+          </Button>
+          <Button onClick={() => setDialog("pasteOrganizer")} title="Paste text with organizer sizes">
+            Paste organizers
+          </Button>
+        </div>
       </div>
       <div className="flex border-b border-border">
         {tabs.map((t) => (
@@ -485,6 +495,8 @@ function LeftSidebar() {
       {dialog === "cabinet" && <CabinetDialog onClose={() => setDialog(null)} />}
       {dialog === "organizer" && <OrganizerDialog onClose={() => setDialog(null)} />}
       {dialog === "layout" && <LayoutDialog onClose={() => setDialog(null)} />}
+      {dialog === "pasteCabinet" && <PasteDialog kind="cabinet" onClose={() => setDialog(null)} />}
+      {dialog === "pasteOrganizer" && <PasteDialog kind="organizer" onClose={() => setDialog(null)} />}
     </aside>
   );
 }
