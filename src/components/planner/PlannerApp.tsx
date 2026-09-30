@@ -474,9 +474,6 @@ function LeftSidebar() {
             Paste organizers
           </Button>
         </div>
-        <Button variant="ghost" full onClick={() => setDialog(null)}>
-          {""}
-        </Button>
       </div>
       <div className="flex border-b border-border">
         {tabs.map((t) => (
