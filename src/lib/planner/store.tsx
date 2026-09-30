@@ -17,6 +17,7 @@ import type {
   Space,
 } from "./types";
 import { boxOf, clamp, clampToWalls, interiorOf, mainSpace, restingY, round1, sizeOf } from "./geometry";
+import { isValid } from "./optimizer";
 
 const KEY = "cabinet-planner-v1";
 
@@ -130,6 +131,7 @@ type Ctx = {
   dropToRest: (id: string) => void;
   deletePlacement: (id: string) => void;
   clearLayout: () => void;
+  applyPlacements: (list: Omit<Placement, "id" | "spaceId">[]) => boolean;
   resetAll: () => void;
 };
 
@@ -413,6 +415,24 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     updateLayout((l) => ({ ...l, placements: [] }));
     setSelection(null);
   }, [updateLayout]);
+
+  const applyPlacements: Ctx["applyPlacements"] = useCallback(
+    (list) => {
+      if (!activeSpace) return false;
+      if (!isValid(list, organizerMap, activeSpace)) return false;
+      const counts: Record<string, number> = {};
+      for (const p of list) counts[p.organizerId] = (counts[p.organizerId] ?? 0) + 1;
+      if (Object.entries(counts).some(([id, n]) => n > (organizerMap[id]?.quantity ?? 0))) return false;
+      const sid = activeSpace.id;
+      updateLayout((l) => ({
+        ...l,
+        placements: list.map((p) => ({ ...p, y: 0, id: uid(), spaceId: sid })),
+      }));
+      setSelection(null);
+      return true;
+    },
+    [activeSpace, organizerMap, updateLayout],
+  );
 
   const resetAll = useCallback(() => {
     setData(seed());
