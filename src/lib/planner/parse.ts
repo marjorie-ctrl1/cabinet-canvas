@@ -46,10 +46,10 @@ export function parseDimensions(text: string, fallbackName: string): ParsedItem[
         nums = all.slice(-3);
       }
       if (nums.length < 3) continue;
-      const v = { [order[0]!]: nums[0], [order[1]!]: nums[1], [order[2]!]: nums[2] } as Record<string, number>;
-      w = w ?? v.w!;
-      d = d ?? v.d!;
-      h = h ?? v.h!;
+      const v = { [order[0]!]: nums[0], [order[1]!]: nums[1], [order[2]!]: nums[2] } as { w: number; d: number; h: number };
+      w = w ?? v.w;
+      d = d ?? v.d;
+      h = h ?? v.h;
     } else if (qm) {
       quantity = Number(qm[1] ?? qm[2]);
     }
