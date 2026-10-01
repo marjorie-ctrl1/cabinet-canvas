@@ -12,22 +12,41 @@ export type Box = {
   z1: number;
 };
 
-/** inner volume between the solid panels: floor + left/right + back/front walls, open top */
-export function interiorOf(c: Cabinet) {
+export const openingOf = (c: Cabinet) => c.opening ?? "front";
+
+/** wall thickness on each side (0 on the open side) */
+export function wallsOf(c: Cabinet) {
+  const o = openingOf(c);
   return {
-    w: Math.max(1, c.w - 2 * WALL),
-    h: Math.max(1, c.h - WALL),
-    d: Math.max(1, c.d - 2 * WALL),
+    left: o === "left" ? 0 : WALL,
+    right: o === "right" ? 0 : WALL,
+    bottom: o === "bottom" ? 0 : WALL,
+    top: o === "top" ? 0 : WALL,
+    back: WALL,
+    front: o === "front" ? 0 : WALL,
+  };
+}
+
+/** inner volume between the solid panels, respecting which side is open */
+export function interiorOf(c: Cabinet) {
+  const k = wallsOf(c);
+  const r = (v: number) => Math.round(v * 10) / 10;
+  return {
+    w: r(Math.max(1, c.w - k.left - k.right)),
+    h: r(Math.max(1, c.h - k.bottom - k.top)),
+    d: r(Math.max(1, c.d - k.back - k.front)),
   };
 }
 
 export function mainSpace(c: Cabinet): Space {
   const i = interiorOf(c);
+  const k = wallsOf(c);
   const s = c.spaces[0];
+  const off = { x: k.left, y: k.bottom, z: k.back };
   // always size the main space to the real inner wall surfaces
   return s
-    ? { ...s, x: 0, y: 0, z: 0, w: i.w, d: i.d, h: i.h }
-    : { id: `${c.id}-main`, name: "Main interior", x: 0, y: 0, z: 0, w: i.w, d: i.d, h: i.h };
+    ? { ...s, ...off, w: i.w, d: i.d, h: i.h }
+    : { id: `${c.id}-main`, name: "Main interior", ...off, w: i.w, d: i.d, h: i.h };
 }
 
 /** keep a footprint's outer edges inside the inner wall surfaces */
