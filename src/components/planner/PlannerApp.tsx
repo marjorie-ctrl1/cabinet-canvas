@@ -537,7 +537,7 @@ function LayoutList() {
 function LeftSidebar() {
   const [tab, setTab] = useState<"cabinets" | "organizers" | "layouts">("organizers");
   const [dialog, setDialog] = useState<
-    null | "cabinet" | "organizer" | "layout" | "pasteCabinet" | "pasteOrganizer"
+    null | "cabinet" | "organizer" | "layout" | "pasteCabinet" | "pasteOrganizer" | "optimize"
   >(null);
   const tabs = [
     { id: "cabinets", label: "Cabinets" },
@@ -556,6 +556,9 @@ function LeftSidebar() {
         </Button>
         <Button full onClick={() => setDialog("layout")}>
           + New Layout
+        </Button>
+        <Button full onClick={() => setDialog("optimize")} title="Find the tightest floor layouts">
+          Optimize layout
         </Button>
         <div className="grid grid-cols-2 gap-2">
           <Button onClick={() => setDialog("pasteCabinet")} title="Paste text with cabinet sizes">
@@ -587,6 +590,7 @@ function LeftSidebar() {
       {dialog === "organizer" && <OrganizerDialog onClose={() => setDialog(null)} />}
       {dialog === "layout" && <LayoutDialog onClose={() => setDialog(null)} />}
       {dialog === "pasteCabinet" && <PasteDialog kind="cabinet" onClose={() => setDialog(null)} />}
+      {dialog === "optimize" && <OptimizerDialog onClose={() => setDialog(null)} />}
       {dialog === "pasteOrganizer" && <PasteDialog kind="organizer" onClose={() => setDialog(null)} />}
     </aside>
   );
