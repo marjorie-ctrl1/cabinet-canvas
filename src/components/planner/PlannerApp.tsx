@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { PlannerProvider, usePlanner } from "@/lib/planner/store";
 import { boxOf, fitsInSpace, interiorOf, round1, sizeOf, statusMap } from "@/lib/planner/geometry";
 import { Scene3D } from "./Scene3D";
-import type { Cabinet, Organizer } from "@/lib/planner/types";
+import type { Cabinet, Opening, Organizer } from "@/lib/planner/types";
 import { parseDimensions, type ParsedItem } from "@/lib/planner/parse";
 import { optimize, type Candidate } from "@/lib/planner/optimizer";
 
@@ -204,7 +204,7 @@ function LayoutDialog({ onClose }: { onClose: () => void }) {
 }
 
 function OptimizerDialog({ onClose }: { onClose: () => void }) {
-  const { data, activeSpace, activeCabinet, organizerMap, applyPlacements } = usePlanner();
+  const { data, activeSpace, activeCabinet, organizerMap, applyPlacements, updateOrganizer } = usePlanner();
   const [anchors, setAnchors] = useState<string[]>([]);
   const [results, setResults] = useState<Candidate[] | null>(null);
   const [pick, setPick] = useState(0);
@@ -237,7 +237,10 @@ function OptimizerDialog({ onClose }: { onClose: () => void }) {
         {data.organizers.map((o) => (
           <label key={o.id} className="flex items-center gap-2 text-sm text-foreground">
             <input type="checkbox" checked={anchors.includes(o.id)} onChange={() => toggle(o.id)} />
-            {o.name} ({o.w}×{o.d}) ×{o.quantity}
+            <span className="flex-1">{o.name} ({o.w}×{o.d})</span>
+            <button type="button" className="h-6 w-6 rounded border border-border" onClick={(e) => { e.preventDefault(); updateOrganizer(o.id, { quantity: Math.max(0, o.quantity - 1) }); setResults(null); }}>−</button>
+            <span className="w-5 text-center">{o.quantity}</span>
+            <button type="button" className="h-6 w-6 rounded border border-border" onClick={(e) => { e.preventDefault(); updateOrganizer(o.id, { quantity: o.quantity + 1 }); setResults(null); }}>+</button>
           </label>
         ))}
       </div>
@@ -615,6 +618,20 @@ function CabinetProps({ cabinet }: { cabinet: Cabinet }) {
         <Field label="Depth" value={cabinet.d} onChange={num("d")} />
         <Field label="Height" value={cabinet.h} onChange={num("h")} />
       </div>
+      <label className="block text-xs text-muted-foreground">
+        Open side
+        <select
+          className="mt-1 block w-full rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground"
+          value={cabinet.opening ?? "front"}
+          onChange={(e) => updateCabinet(cabinet.id, { opening: e.target.value as Opening })}
+        >
+          <option value="front">Front (facing you)</option>
+          <option value="top">Top (lying flat, open up)</option>
+          <option value="bottom">Bottom (upside down)</option>
+          <option value="left">Left side</option>
+          <option value="right">Right side</option>
+        </select>
+      </label>
       <p className="text-xs text-muted-foreground">
         Usable interior: {interiorOf(cabinet).w} × {interiorOf(cabinet).d} × {interiorOf(cabinet).h} cm
       </p>

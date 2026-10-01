@@ -109,7 +109,7 @@ type Ctx = {
   usedCount: (organizerId: string) => number;
   remaining: (organizerId: string) => number;
   addCabinet: (v: { name: string; w: number; d: number; h: number }) => void;
-  updateCabinet: (id: string, v: Partial<Pick<Cabinet, "name" | "w" | "d" | "h">>) => void;
+  updateCabinet: (id: string, v: Partial<Pick<Cabinet, "name" | "w" | "d" | "h" | "opening">>) => void;
   deleteCabinet: (id: string) => void;
   addOrganizer: (v: {
     name: string;

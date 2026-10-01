@@ -3,7 +3,7 @@ import { Environment, Html, Lightformer, OrbitControls } from "@react-three/drei
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { usePlanner } from "@/lib/planner/store";
-import { WALL, sizeOf, statusMap } from "@/lib/planner/geometry";
+import { sizeOf, statusMap, wallsOf } from "@/lib/planner/geometry";
 import type { Cabinet, Space } from "@/lib/planner/types";
 
 const WOOD = "#c19a6b";
@@ -54,14 +54,19 @@ function CameraRig({ cabinet }: { cabinet: Cabinet }) {
 
 function CabinetMesh({ cabinet, onSelect }: { cabinet: Cabinet; onSelect: () => void }) {
   const { w, d, h } = cabinet;
-  const panels: { size: [number, number, number]; pos: [number, number, number] }[] = [
-    // Open face points UP (like a drawer on the floor): floor + 4 walls, no top panel.
-    { size: [w, WALL, d], pos: [0, WALL / 2, 0] },
-    { size: [WALL, h - WALL, d], pos: [-w / 2 + WALL / 2, (h + WALL) / 2, 0] },
-    { size: [WALL, h - WALL, d], pos: [w / 2 - WALL / 2, (h + WALL) / 2, 0] },
-    { size: [w - 2 * WALL, h - WALL, WALL], pos: [0, (h + WALL) / 2, -d / 2 + WALL / 2] },
-    { size: [w - 2 * WALL, h - WALL, WALL], pos: [0, (h + WALL) / 2, d / 2 - WALL / 2] },
-  ];
+  const k = wallsOf(cabinet);
+  const iw = w - k.left - k.right;
+  const ih = h - k.bottom - k.top;
+  const cx = (k.left - k.right) / 2;
+  const cy = k.bottom + ih / 2;
+  // full-size floor/top, sides between them, back/front between the sides
+  const panels: { size: [number, number, number]; pos: [number, number, number] }[] = [];
+  if (k.bottom) panels.push({ size: [w, k.bottom, d], pos: [0, k.bottom / 2, 0] });
+  if (k.top) panels.push({ size: [w, k.top, d], pos: [0, h - k.top / 2, 0] });
+  if (k.left) panels.push({ size: [k.left, ih, d], pos: [-w / 2 + k.left / 2, cy, 0] });
+  if (k.right) panels.push({ size: [k.right, ih, d], pos: [w / 2 - k.right / 2, cy, 0] });
+  panels.push({ size: [iw, ih, k.back], pos: [cx, cy, -d / 2 + k.back / 2] });
+  if (k.front) panels.push({ size: [iw, ih, k.front], pos: [cx, cy, d / 2 - k.front / 2] });
   return (
     <group
       onPointerDown={(e) => {
@@ -72,7 +77,7 @@ function CabinetMesh({ cabinet, onSelect }: { cabinet: Cabinet; onSelect: () => 
       {panels.map((p, i) => (
         <mesh key={i} position={p.pos} castShadow receiveShadow>
           <boxGeometry args={p.size} />
-          <meshStandardMaterial color={i === 4 ? WOOD_DARK : WOOD} roughness={0.75} />
+          <meshStandardMaterial color={i % 2 ? WOOD_DARK : WOOD} roughness={0.75} />
         </mesh>
       ))}
     </group>
@@ -99,9 +104,9 @@ export function Scene3D() {
   const origin = useMemo(() => {
     if (!cabinet || !space) return new THREE.Vector3();
     return new THREE.Vector3(
-      -cabinet.w / 2 + WALL + space.x,
-      WALL + space.y,
-      -cabinet.d / 2 + WALL + space.z,
+      -cabinet.w / 2 + space.x,
+      space.y,
+      -cabinet.d / 2 + space.z,
     );
   }, [cabinet, space]);
 

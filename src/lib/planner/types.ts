@@ -17,6 +17,8 @@ export type Cabinet = {
   w: number;
   d: number;
   h: number;
+  /** which side is open; default "front" (facing the user) */
+  opening?: Opening;
   /** a cabinet can hold several independent interior spaces (shelves/drawers later) */
   spaces: Space[];
 };
@@ -61,3 +63,5 @@ export type PlannerData = {
   layouts: Layout[];
   activeLayoutId: string | null;
 };
+
+export type Opening = "front" | "top" | "bottom" | "left" | "right";
