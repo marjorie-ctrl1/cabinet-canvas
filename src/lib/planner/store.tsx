@@ -466,6 +466,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     dropToRest,
     deletePlacement,
     clearLayout,
+    applyPlacements,
     resetAll,
   };
 
