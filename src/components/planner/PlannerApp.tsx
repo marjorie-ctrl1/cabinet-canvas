@@ -1,9 +1,10 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { PlannerProvider, usePlanner } from "@/lib/planner/store";
-import { boxOf, fitsInSpace, interiorOf, sizeOf, statusMap } from "@/lib/planner/geometry";
+import { boxOf, fitsInSpace, interiorOf, round1, sizeOf, statusMap } from "@/lib/planner/geometry";
 import { Scene3D } from "./Scene3D";
 import type { Cabinet, Organizer } from "@/lib/planner/types";
 import { parseDimensions, type ParsedItem } from "@/lib/planner/parse";
+import { optimize, type Candidate } from "@/lib/planner/optimizer";
 
 /* ---------------------------------------------------------------- primitives */
 
@@ -198,6 +199,96 @@ function LayoutDialog({ onClose }: { onClose: () => void }) {
           Create layout
         </Button>
       </div>
+    </Modal>
+  );
+}
+
+function OptimizerDialog({ onClose }: { onClose: () => void }) {
+  const { data, activeSpace, activeCabinet, organizerMap, applyPlacements } = usePlanner();
+  const [anchors, setAnchors] = useState<string[]>([]);
+  const [results, setResults] = useState<Candidate[] | null>(null);
+  const [pick, setPick] = useState(0);
+  const [err, setErr] = useState("");
+  if (!activeSpace || !activeCabinet)
+    return (
+      <Modal title="Layout optimizer" onClose={onClose}>
+        <p className="text-sm text-muted-foreground">Open a layout with a cabinet first.</p>
+      </Modal>
+    );
+  const sp = activeSpace;
+  const run = (withAnchors: boolean) => {
+    setErr("");
+    const r = optimize(data.organizers, sp, withAnchors ? anchors : []);
+    setResults(r);
+    setPick(0);
+    if (r.length === 0) setErr("No valid layout found — the selected organizers may not fit on the floor.");
+  };
+  const toggle = (id: string) =>
+    setAnchors((a) => (a.includes(id) ? a.filter((x) => x !== id) : a.length < 3 ? [...a, id] : a));
+  const cur = results?.[pick];
+  const scale = 300 / Math.max(sp.w, sp.d);
+  return (
+    <Modal title={`Layout optimizer — ${activeCabinet.name}`} onClose={onClose} wide>
+      <p className="mb-2 text-xs text-muted-foreground">
+        Packs organizers flat on the floor ({round1(sp.w)} × {round1(sp.d)} cm usable), no stacking, turning only 90°.
+        Optionally tick 1–3 organizers to build around — they're always included but may be moved or turned.
+      </p>
+      <div className="mb-3 grid grid-cols-2 gap-1">
+        {data.organizers.map((o) => (
+          <label key={o.id} className="flex items-center gap-2 text-sm text-foreground">
+            <input type="checkbox" checked={anchors.includes(o.id)} onChange={() => toggle(o.id)} />
+            {o.name} ({o.w}×{o.d}) ×{o.quantity}
+          </label>
+        ))}
+      </div>
+      <div className="mb-3 flex gap-2">
+        <Button variant="primary" onClick={() => run(false)}>Find best layouts</Button>
+        <Button disabled={anchors.length === 0} onClick={() => run(true)}>Build around selected</Button>
+      </div>
+      {err && <p className="mb-2 text-sm text-destructive">{err}</p>}
+      {results && results.length > 0 && cur && (
+        <div className="flex gap-4">
+          <div className="w-48 space-y-1">
+            {results.map((r, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setPick(i)}
+                className={`w-full rounded-md border px-2 py-1 text-left text-xs ${i === pick ? "border-primary bg-secondary" : "border-border"}`}
+              >
+                Option {i + 1}: {round1(r.unusedArea)} cm² unused · {r.placedCount} placed
+              </button>
+            ))}
+          </div>
+          <div className="flex-1">
+            <svg width={sp.w * scale} height={sp.d * scale} className="rounded border border-border bg-muted">
+              {cur.placements.map((p, i) => {
+                const o = organizerMap[p.organizerId]!;
+                const s = sizeOf(o, p.rotation);
+                return (
+                  <g key={i}>
+                    <rect x={p.x * scale} y={p.z * scale} width={s.w * scale} height={s.d * scale} fill={o.color} stroke="currentColor" strokeWidth={0.5} />
+                    <text x={(p.x + s.w / 2) * scale} y={(p.z + s.d / 2) * scale} fontSize={9} textAnchor="middle" fill="currentColor">{o.name}</text>
+                  </g>
+                );
+              })}
+            </svg>
+            <p className="mt-1 text-xs text-muted-foreground">Top-down preview. Unused: {round1(cur.unusedArea)} cm².</p>
+            <div className="mt-2">
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (applyPlacements(cur.placements)) onClose();
+                  else setErr("This layout no longer passes the placement rules; please run again.");
+                }}
+              >
+                Apply layout
+              </Button>
+              <span className="ml-2 text-xs text-muted-foreground">Replaces the boxes in the current layout.</span>
+            </div>
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }
@@ -446,7 +537,7 @@ function LayoutList() {
 function LeftSidebar() {
   const [tab, setTab] = useState<"cabinets" | "organizers" | "layouts">("organizers");
   const [dialog, setDialog] = useState<
-    null | "cabinet" | "organizer" | "layout" | "pasteCabinet" | "pasteOrganizer"
+    null | "cabinet" | "organizer" | "layout" | "pasteCabinet" | "pasteOrganizer" | "optimize"
   >(null);
   const tabs = [
     { id: "cabinets", label: "Cabinets" },
@@ -465,6 +556,9 @@ function LeftSidebar() {
         </Button>
         <Button full onClick={() => setDialog("layout")}>
           + New Layout
+        </Button>
+        <Button full onClick={() => setDialog("optimize")} title="Find the tightest floor layouts">
+          Optimize layout
         </Button>
         <div className="grid grid-cols-2 gap-2">
           <Button onClick={() => setDialog("pasteCabinet")} title="Paste text with cabinet sizes">
@@ -496,6 +590,7 @@ function LeftSidebar() {
       {dialog === "organizer" && <OrganizerDialog onClose={() => setDialog(null)} />}
       {dialog === "layout" && <LayoutDialog onClose={() => setDialog(null)} />}
       {dialog === "pasteCabinet" && <PasteDialog kind="cabinet" onClose={() => setDialog(null)} />}
+      {dialog === "optimize" && <OptimizerDialog onClose={() => setDialog(null)} />}
       {dialog === "pasteOrganizer" && <PasteDialog kind="organizer" onClose={() => setDialog(null)} />}
     </aside>
   );
