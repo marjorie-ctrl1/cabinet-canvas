@@ -59,8 +59,6 @@ function CabinetMesh({ cabinet, onSelect }: { cabinet: Cabinet; onSelect: () => 
   const ih = h - k.bottom - k.top;
   const cx = (k.left - k.right) / 2;
   const cy = k.bottom + ih / 2;
-  const cz = (k.back - k.front) / 2;
-  const id = d - k.back - k.front;
   // full-size floor/top, sides between them, back/front between the sides
   const panels: { size: [number, number, number]; pos: [number, number, number] }[] = [];
   if (k.bottom) panels.push({ size: [w, k.bottom, d], pos: [0, k.bottom / 2, 0] });
@@ -69,7 +67,6 @@ function CabinetMesh({ cabinet, onSelect }: { cabinet: Cabinet; onSelect: () => 
   if (k.right) panels.push({ size: [k.right, ih, d], pos: [w / 2 - k.right / 2, cy, 0] });
   panels.push({ size: [iw, ih, k.back], pos: [cx, cy, -d / 2 + k.back / 2] });
   if (k.front) panels.push({ size: [iw, ih, k.front], pos: [cx, cy, d / 2 - k.front / 2] });
-  void cz; void id;
   return (
     <group
       onPointerDown={(e) => {

@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { PlannerProvider, usePlanner } from "@/lib/planner/store";
 import { boxOf, fitsInSpace, interiorOf, round1, sizeOf, statusMap } from "@/lib/planner/geometry";
 import { Scene3D } from "./Scene3D";
-import type { Cabinet, Organizer } from "@/lib/planner/types";
+import type { Cabinet, Opening, Organizer } from "@/lib/planner/types";
 import { parseDimensions, type ParsedItem } from "@/lib/planner/parse";
 import { optimize, type Candidate } from "@/lib/planner/optimizer";
 
