@@ -799,13 +799,13 @@ function Shell() {
             />
           )}
           <span className="text-xs text-muted-foreground">Saved automatically</span>
-          <Button
+          {activeLayout && (<Button
             variant={activeLayout.allowStacking ? "primary" : undefined}
             onClick={() => setStacking(!activeLayout.allowStacking)}
             title="Allow organizers to sit on top of each other in this layout"
           >
             Allow stacking: {activeLayout.allowStacking ? "ON" : "OFF"}
-          </Button>
+          </Button>)}
           <Button onClick={clearLayout}>Empty layout</Button>
           <Button
             variant="ghost"
