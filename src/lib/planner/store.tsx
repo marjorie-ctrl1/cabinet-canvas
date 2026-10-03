@@ -131,6 +131,7 @@ type Ctx = {
   dropToRest: (id: string) => void;
   deletePlacement: (id: string) => void;
   clearLayout: () => void;
+  setStacking: (on: boolean) => void;
   applyPlacements: (list: Omit<Placement, "id" | "spaceId">[]) => boolean;
   resetAll: () => void;
 };
@@ -313,7 +314,9 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
           return o ? boxOf(p, o) : null;
         })
         .filter(Boolean) as ReturnType<typeof boxOf>[];
-      const py = restingY({ x0: px, x1: px + s.w, z0: pz, z1: pz + s.d }, others);
+      const py = layout.allowStacking
+        ? restingY({ x0: px, x1: px + s.w, z0: pz, z1: pz + s.d }, others)
+        : 0;
       return { x: px, y: py, z: pz };
     },
     [organizerMap],
@@ -416,6 +419,11 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     setSelection(null);
   }, [updateLayout]);
 
+  const setStacking = useCallback(
+    (on: boolean) => updateLayout((l) => ({ ...l, allowStacking: on })),
+    [updateLayout],
+  );
+
   const applyPlacements: Ctx["applyPlacements"] = useCallback(
     (list) => {
       if (!activeSpace) return false;
@@ -466,6 +474,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     dropToRest,
     deletePlacement,
     clearLayout,
+    setStacking,
     applyPlacements,
     resetAll,
   };

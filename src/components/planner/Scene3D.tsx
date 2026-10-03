@@ -108,7 +108,7 @@ export function Scene3D() {
   }, [cabinet, space]);
 
   const statuses = useMemo(
-    () => (layout && space ? statusMap(layout.placements, organizerMap, space) : {}),
+    () => (layout && space ? statusMap(layout.placements, organizerMap, space, !!layout.allowStacking) : {}),
     [layout, space, organizerMap],
   );
 
