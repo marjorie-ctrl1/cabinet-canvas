@@ -1,3 +1,4 @@
+import type React from "react";
 import {
   createContext,
   useCallback,
@@ -136,7 +137,9 @@ type Ctx = {
   resetAll: () => void;
 };
 
-const PlannerCtx = createContext<Ctx | null>(null);
+// keep one context instance across hot reloads so provider and consumers always match
+const g = globalThis as { __plannerCtx?: React.Context<Ctx | null> };
+const PlannerCtx = (g.__plannerCtx ??= createContext<Ctx | null>(null));
 
 export function PlannerProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<PlannerData>(() => load());
