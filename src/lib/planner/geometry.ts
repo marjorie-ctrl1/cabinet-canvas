@@ -140,6 +140,7 @@ export function statusMap(
   placements: Placement[],
   organizers: Record<string, Organizer>,
   space: Space,
+  allowStacking = true,
 ): Record<string, PlacementStatus> {
   const boxes = placements
     .map((p) => {
@@ -150,7 +151,13 @@ export function statusMap(
 
   const out: Record<string, PlacementStatus> = {};
   for (const a of boxes) {
-    const collides = boxes.some((b) => b.id !== a.id && overlaps(a.box, b.box));
+    const collides = boxes.some(
+      (b) =>
+        b.id !== a.id &&
+        (allowStacking
+          ? overlaps(a.box, b.box)
+          : overlaps({ ...a.box, y0: 0, y1: 1 }, { ...b.box, y0: 0, y1: 1 })),
+    );
     out[a.id] = { fits: fitsInSpace(a.box, space), collides };
   }
   return out;

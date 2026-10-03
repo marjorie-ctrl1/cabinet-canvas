@@ -49,6 +49,8 @@ export type Layout = {
   name: string;
   cabinetId: string;
   placements: Placement[];
+  /** off (default): boxes may not share floor footprint; on: may stack */
+  allowStacking?: boolean;
 };
 
 export type Selection =

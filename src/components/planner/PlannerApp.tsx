@@ -691,7 +691,7 @@ function PlacementProps({ placementId }: { placementId: string }) {
   const statuses = useMemo(
     () =>
       activeLayout && activeSpace
-        ? statusMap(activeLayout.placements, organizerMap, activeSpace)
+        ? statusMap(activeLayout.placements, organizerMap, activeSpace, !!activeLayout.allowStacking)
         : {},
     [activeLayout, activeSpace, organizerMap],
   );
@@ -782,7 +782,7 @@ function RightSidebar() {
 /* ---------------------------------------------------------------- app shell */
 
 function Shell() {
-  const { activeLayout, renameLayout, clearLayout, resetAll } = usePlanner();
+  const { activeLayout, renameLayout, clearLayout, resetAll, setStacking } = usePlanner();
   return (
     <div className="flex h-screen flex-col bg-background">
       <header className="flex items-center justify-between gap-4 border-b border-border bg-panel px-4 py-2">
@@ -799,6 +799,13 @@ function Shell() {
             />
           )}
           <span className="text-xs text-muted-foreground">Saved automatically</span>
+          <Button
+            variant={activeLayout.allowStacking ? "primary" : undefined}
+            onClick={() => setStacking(!activeLayout.allowStacking)}
+            title="Allow organizers to sit on top of each other in this layout"
+          >
+            Allow stacking: {activeLayout.allowStacking ? "ON" : "OFF"}
+          </Button>
           <Button onClick={clearLayout}>Empty layout</Button>
           <Button
             variant="ghost"
