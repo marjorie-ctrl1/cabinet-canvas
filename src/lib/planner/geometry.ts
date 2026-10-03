@@ -165,3 +165,49 @@ export function statusMap(
 
 export const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 export const round1 = (v: number) => Math.round(v * 10) / 10;
+
+type Foot = { w: number; d: number };
+const hitXZ = (x: number, z: number, s: Foot, o: Box) =>
+  x < o.x1 - EPS && o.x0 < x + s.w - EPS && z < o.z1 - EPS && o.z0 < z + s.d - EPS;
+
+/** solid-body move on the floor: slide from prev toward target, stopping at other boxes' edges */
+export function sweepXZ(
+  prev: { x: number; z: number },
+  target: { x: number; z: number },
+  s: Foot,
+  others: Box[],
+) {
+  const solid = others.filter((o) => !hitXZ(prev.x, prev.z, s, o)); // ignore boxes already overlapping
+  let x = target.x;
+  for (const o of solid) {
+    if (!(prev.z < o.z1 - EPS && o.z0 < prev.z + s.d - EPS)) continue;
+    if (x > prev.x && o.x0 >= prev.x + s.w - EPS) x = Math.min(x, o.x0 - s.w);
+    if (x < prev.x && o.x1 <= prev.x + EPS) x = Math.max(x, o.x1);
+  }
+  let z = target.z;
+  for (const o of solid) {
+    if (!(x < o.x1 - EPS && o.x0 < x + s.w - EPS)) continue;
+    if (z > prev.z && o.z0 >= prev.z + s.d - EPS) z = Math.min(z, o.z0 - s.d);
+    if (z < prev.z && o.z1 <= prev.z + EPS) z = Math.max(z, o.z1);
+  }
+  return { x, z };
+}
+
+/** nearest floor spot to target that touches no other box and stays inside the walls; null if none */
+export function nearestFreeXZ(target: { x: number; z: number }, s: Foot, others: Box[], space: Space) {
+  const mx = Math.max(0, space.w - s.w);
+  const mz = Math.max(0, space.d - s.d);
+  const xs = [target.x, 0, mx, ...others.flatMap((o) => [o.x1, o.x0 - s.w])];
+  const zs = [target.z, 0, mz, ...others.flatMap((o) => [o.z1, o.z0 - s.d])];
+  let best: { x: number; z: number } | null = null;
+  let bd = Infinity;
+  for (const rx of xs)
+    for (const rz of zs) {
+      const x = clamp(rx, 0, mx);
+      const z = clamp(rz, 0, mz);
+      if (others.some((o) => hitXZ(x, z, s, o))) continue;
+      const dd = (x - target.x) ** 2 + (z - target.z) ** 2;
+      if (dd < bd) { bd = dd; best = { x, z }; }
+    }
+  return best;
+}
