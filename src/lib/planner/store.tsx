@@ -17,7 +17,7 @@ import type {
   Selection,
   Space,
 } from "./types";
-import { boxOf, clamp, clampToWalls, interiorOf, mainSpace, restingY, round1, sizeOf } from "./geometry";
+import { boxOf, clamp, clampToWalls, nearestFreeXZ, sweepXZ, interiorOf, mainSpace, restingY, round1, sizeOf } from "./geometry";
 import { isValid } from "./optimizer";
 
 const KEY = "cabinet-planner-v1";
@@ -305,11 +305,10 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       z: number,
       space: Space,
       ignoreId?: string,
+      prev?: { x: number; z: number },
     ) => {
       const s = sizeOf(organizer, rotation);
-      const w = clampToWalls(x, z, s, space);
-      const px = round1(w.x);
-      const pz = round1(w.z);
+      let w = clampToWalls(x, z, s, space);
       const others = layout.placements
         .filter((p) => p.id !== ignoreId)
         .map((p) => {
@@ -317,11 +316,26 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
           return o ? boxOf(p, o) : null;
         })
         .filter(Boolean) as ReturnType<typeof boxOf>[];
+      if (!layout.allowStacking) {
+        // solid bodies: slide and stop at other organizers, never overlap
+        w = prev ? sweepXZ(prev, w, s, others) : (nearestFreeXZ(w, s, others, space) ?? w);
+      }
+      const px = round1(w.x);
+      const pz = round1(w.z);
       const py = layout.allowStacking
         ? restingY({ x0: px, x1: px + s.w, z0: pz, z1: pz + s.d }, others)
         : 0;
       return { x: px, y: py, z: pz };
     },
+    [organizerMap],
+  );
+
+  const othersOf = useCallback(
+    (l: Layout, ignoreId: string) =>
+      l.placements.flatMap((q) => {
+        const o = q.id === ignoreId ? null : organizerMap[q.organizerId];
+        return o ? [boxOf(q, o)] : [];
+      }),
     [organizerMap],
   );
 
@@ -351,7 +365,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       const p = activeLayout.placements.find((it) => it.id === id);
       const o = p ? organizerMap[p.organizerId] : null;
       if (!p || !o) return;
-      const pos = solve(activeLayout, o, p.rotation, x, z, activeSpace, id);
+      const pos = solve(activeLayout, o, p.rotation, x, z, activeSpace, id, { x: p.x, z: p.z });
       updateLayout((l) => ({
         ...l,
         placements: l.placements.map((it) => (it.id === id ? { ...it, ...pos } : it)),
@@ -372,6 +386,11 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
                   o && activeSpace
                     ? clampToWalls(v.x ?? p.x, v.z ?? p.z, sizeOf(o, p.rotation), activeSpace)
                     : { x: v.x ?? p.x, z: v.z ?? p.z };
+                if (!l.allowStacking && o && activeSpace) {
+                  const f = nearestFreeXZ(w, sizeOf(o, p.rotation), othersOf(l, p.id), activeSpace);
+                  if (!f) return p;
+                  return { ...p, x: round1(f.x), y: 0, z: round1(f.z) };
+                }
                 return { ...p, x: round1(w.x), y: round1(Math.max(0, v.y ?? p.y)), z: round1(w.z) };
               })()
             : p,
@@ -392,6 +411,11 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
                 const o = organizerMap[p.organizerId];
                 if (!o || !activeSpace) return { ...p, rotation };
                 const w = clampToWalls(p.x, p.z, sizeOf(o, rotation), activeSpace);
+                if (!l.allowStacking) {
+                  const f = nearestFreeXZ(w, sizeOf(o, rotation), othersOf(l, p.id), activeSpace);
+                  if (!f) return p; // no room to turn: stay as is
+                  return { ...p, rotation, x: round1(f.x), y: 0, z: round1(f.z) };
+                }
                 return { ...p, rotation, x: round1(w.x), z: round1(w.z) };
               })()
             : p,
