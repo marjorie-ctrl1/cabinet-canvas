@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { PlannerProvider, usePlanner } from "@/lib/planner/store";
-import { boxOf, fitsInSpace, interiorOf, round1, sizeOf, statusMap } from "@/lib/planner/geometry";
+import { boxOf, fitsInSpace, gapsOf, interiorOf, round1, sizeOf, statusMap } from "@/lib/planner/geometry";
 import { Scene3D } from "./Scene3D";
 import type { Cabinet, Opening, Organizer } from "@/lib/planner/types";
 import { parseDimensions, type ParsedItem } from "@/lib/planner/parse";
@@ -276,6 +276,12 @@ function OptimizerDialog({ onClose }: { onClose: () => void }) {
                 );
               })}
             </svg>
+            {(() => {
+              const g = gapsOf(cur.placements.map((p) => boxOf({ ...p, id: "", spaceId: sp.id }, organizerMap[p.organizerId]!)), sp);
+              return g ? (
+                <p className="mt-1 text-xs">Left {g.left} · Right {g.right} · Back (top edge) {g.back} · Front (bottom edge) {g.front} · Top {g.top} cm</p>
+              ) : null;
+            })()}
             <p className="mt-1 text-xs text-muted-foreground">Top-down preview. Unused: {round1(cur.unusedArea)} cm².</p>
             <div className="mt-2">
               <Button
