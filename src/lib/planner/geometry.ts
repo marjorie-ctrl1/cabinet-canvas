@@ -27,14 +27,31 @@ export function wallsOf(c: Cabinet) {
   };
 }
 
-/** inner volume between the solid panels, respecting which side is open */
+/** entered W × D × H ARE the usable interior; walls are drawn outside it, never subtracted */
 export function interiorOf(c: Cabinet) {
+  return { w: Math.max(1, c.w), h: Math.max(1, c.h), d: Math.max(1, c.d) };
+}
+
+/** outer carcass size = interior + wall panels */
+export function outerOf(c: Cabinet) {
   const k = wallsOf(c);
-  const r = (v: number) => Math.round(v * 10) / 10;
+  return { w: c.w + k.left + k.right, h: c.h + k.bottom + k.top, d: c.d + k.back + k.front };
+}
+
+export type Gaps = { left: number; right: number; back: number; front: number; bottom: number; top: number };
+
+/** unused space between the placed boxes and each inner wall, in space cm (same coords as placement) */
+export function gapsOf(boxes: Box[], space: Space): Gaps | null {
+  if (boxes.length === 0) return null;
+  const min = (f: (b: Box) => number) => Math.min(...boxes.map(f));
+  const max = (f: (b: Box) => number) => Math.max(...boxes.map(f));
   return {
-    w: r(Math.max(1, c.w - k.left - k.right)),
-    h: r(Math.max(1, c.h - k.bottom - k.top)),
-    d: r(Math.max(1, c.d - k.back - k.front)),
+    left: round1(min((b) => b.x0)),
+    right: round1(space.w - max((b) => b.x1)),
+    back: round1(min((b) => b.z0)),
+    front: round1(space.d - max((b) => b.z1)),
+    bottom: round1(min((b) => b.y0)),
+    top: round1(space.h - max((b) => b.y1)),
   };
 }
 
