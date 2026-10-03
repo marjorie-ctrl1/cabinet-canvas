@@ -3,7 +3,7 @@ import { Environment, Html, Lightformer, OrbitControls } from "@react-three/drei
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { usePlanner } from "@/lib/planner/store";
-import { sizeOf, statusMap, wallsOf } from "@/lib/planner/geometry";
+import { boxOf, gapsOf, outerOf, sizeOf, statusMap, wallsOf } from "@/lib/planner/geometry";
 import type { Cabinet, Space } from "@/lib/planner/types";
 
 const WOOD = "#c19a6b";
@@ -53,7 +53,7 @@ function CameraRig({ cabinet }: { cabinet: Cabinet }) {
 }
 
 function CabinetMesh({ cabinet, onSelect }: { cabinet: Cabinet; onSelect: () => void }) {
-  const { w, d, h } = cabinet;
+  const { w, d, h } = outerOf(cabinet);
   const k = wallsOf(cabinet);
   const iw = w - k.left - k.right;
   const ih = h - k.bottom - k.top;
@@ -103,11 +103,8 @@ export function Scene3D() {
 
   const origin = useMemo(() => {
     if (!cabinet || !space) return new THREE.Vector3();
-    return new THREE.Vector3(
-      -cabinet.w / 2 + space.x,
-      space.y,
-      -cabinet.d / 2 + space.z,
-    );
+    const out = outerOf(cabinet);
+    return new THREE.Vector3(-out.w / 2 + space.x, space.y, -out.d / 2 + space.z);
   }, [cabinet, space]);
 
   const statuses = useMemo(
@@ -137,6 +134,15 @@ export function Scene3D() {
       window.removeEventListener("pointerup", up);
     };
   }, [dragId, layout, organizerMap, movePlacement, origin]);
+
+  const gaps = useMemo(() => {
+    if (!layout || !space) return null;
+    const boxes = layout.placements.flatMap((p) => {
+      const o = organizerMap[p.organizerId];
+      return o ? [boxOf(p, o)] : [];
+    });
+    return gapsOf(boxes, space);
+  }, [layout, space, organizerMap]);
 
   if (!cabinet || !space) {
     return (
@@ -205,6 +211,22 @@ export function Scene3D() {
             <meshBasicMaterial color="#6b8fa3" wireframe transparent opacity={0.25} />
           </mesh>
 
+          {gaps &&
+            (
+              [
+                ["Left", gaps.left, 0, space.d / 2],
+                ["Right", gaps.right, space.w, space.d / 2],
+                ["Back", gaps.back, space.w / 2, 0],
+                ["Front", gaps.front, space.w / 2, space.d],
+              ] as const
+            ).map(([n, v, x, z]) => (
+              <Html key={n} center distanceFactor={1.4} position={[origin.x + x, origin.y + 1, origin.z + z]}>
+                <div className="pointer-events-none whitespace-nowrap rounded bg-card/90 px-1.5 py-0.5 text-[10px] font-medium text-foreground shadow">
+                  {n} gap: {v} cm
+                </div>
+              </Html>
+            ))}
+
           {(layout?.placements ?? []).map((p) => {
             const o = organizerMap[p.organizerId];
             if (!o) return null;
@@ -268,6 +290,16 @@ export function Scene3D() {
           maxPolarAngle={Math.PI / 2.05}
         />
       </Canvas>
+
+      {gaps && (
+        <div className="pointer-events-none absolute right-3 top-3 rounded-md bg-card/90 px-3 py-2 text-xs text-foreground shadow">
+          <div className="mb-1 font-semibold">Unused space (cm)</div>
+          <div>Left {gaps.left} · Right {gaps.right}</div>
+          <div>Back {gaps.back} · Front {gaps.front}</div>
+          <div>Bottom {gaps.bottom} · Top {gaps.top}</div>
+          <div className="mt-1 text-muted-foreground">Interior {space.w} × {space.d} × {space.h}</div>
+        </div>
+      )}
 
       <div className="pointer-events-none absolute bottom-3 left-3 rounded-md bg-card/90 px-3 py-2 text-xs text-muted-foreground shadow">
         Drag an organizer card into the cabinet · drag a box to move it · right-drag to pan ·
