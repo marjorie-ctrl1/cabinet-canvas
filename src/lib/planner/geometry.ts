@@ -57,9 +57,8 @@ export function gapsOf(boxes: Box[], space: Space): Gaps | null {
 
 export function mainSpace(c: Cabinet): Space {
   const i = interiorOf(c);
-  const k = wallsOf(c);
   const s = c.spaces[0];
-  const off = { x: k.left, y: k.bottom, z: k.back };
+  const off = { x: 0, y: 0, z: 0 };
   // always size the main space to the real inner wall surfaces
   return s
     ? { ...s, ...off, w: i.w, d: i.d, h: i.h }
